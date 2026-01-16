@@ -31,11 +31,17 @@ fun GameDealsApp() {
 
     if (!isLoggedIn) {
         LoginScreen { email, password ->
-            if (email == "admin@gamedeals.com" && password == "1234") {
+
+            //  LOGIN SIMULADO (ESTO ES LO IMPORTANTE)
+            if (email == "admin@test.com" && password == "1234") {
                 userEmail = email
                 isLoggedIn = true
             } else {
-                Toast.makeText(context, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    "Credenciales incorrectas",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     } else {
@@ -55,7 +61,7 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("GameDeals", fontSize = 32.sp, color = MaterialTheme.colorScheme.primary)
+        Text("GameDeals", fontSize = 32.sp)
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -63,7 +69,6 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -73,7 +78,6 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
             value = password,
             onValueChange = { password = it },
             label = { Text("Contraseña") },
-            singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -93,7 +97,7 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
 fun MainScreen(userEmail: String) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
-            "¡Bienvenido a GameDeals, $userEmail!",
+            "¡Bienvenido $userEmail!",
             fontSize = 20.sp,
             modifier = Modifier.padding(16.dp)
         )

@@ -1,5 +1,6 @@
 package com.example.gamedeals
 
+import com.example.gamedeals.api.AuthApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 

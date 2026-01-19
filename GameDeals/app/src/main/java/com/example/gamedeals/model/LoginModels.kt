@@ -1,4 +1,4 @@
-package com.example.gamedeals
+package com.example.gamedeals.model
 
 data class LoginRequest(
     val email: String,

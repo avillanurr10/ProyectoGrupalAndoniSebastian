@@ -1,4 +1,4 @@
-package com.example.gamedeals
+package com.example.gamedeals.ui.deals
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.gamedeals.database.FavoriteDeal
+import com.example.gamedeals.viewmodel.FavoritesViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
@@ -47,7 +49,7 @@ private val retrofit = Retrofit.Builder()
 private val api = retrofit.create(CheapSharkApi::class.java)
 
 @Composable
-fun DealsScreen() {
+fun DealsScreen(viewModel: FavoritesViewModel) {
     var deals by remember { mutableStateOf<List<Deal>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -62,10 +64,7 @@ fun DealsScreen() {
     }
 
     if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
@@ -75,14 +74,15 @@ fun DealsScreen() {
                 .padding(8.dp)
         ) {
             items(deals) { deal ->
-                DealCard(deal)
+                DealCard(deal, viewModel)
             }
         }
     }
 }
 
+// Aquí va DealCard
 @Composable
-fun DealCard(deal: Deal) {
+fun DealCard(deal: Deal, viewModel: FavoritesViewModel) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -96,11 +96,7 @@ fun DealCard(deal: Deal) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
-                painter = rememberAsyncImagePainter(
-                    model = deal.thumb,
-                    error = null, // placeholder no crash
-                    placeholder = null
-                ),
+                painter = rememberAsyncImagePainter(deal.thumb),
                 contentDescription = deal.title,
                 modifier = Modifier
                     .size(80.dp)
@@ -110,10 +106,24 @@ fun DealCard(deal: Deal) {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(deal.title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
                 Text("Oferta: $${deal.salePrice}", color = MaterialTheme.colorScheme.primary)
                 Text("Normal: $${deal.normalPrice}", fontSize = 12.sp)
                 Text("Tienda: ${deal.storeID}", fontSize = 12.sp)
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+                    viewModel.addFavorite(
+                        FavoriteDeal(
+                            title = deal.title,
+                            salePrice = deal.salePrice,
+                            normalPrice = deal.normalPrice,
+                            storeID = deal.storeID,
+                            thumb = deal.thumb
+                        )
+                    )
+                }) {
+                    Text("❤️ Favorito")
+                }
             }
         }
     }

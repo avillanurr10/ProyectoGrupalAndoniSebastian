@@ -1,5 +1,7 @@
-package com.example.gamedeals
+package com.example.gamedeals.ui.main
 
+import ExtraScreen
+import ProfileScreen
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -13,6 +15,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.*
+import com.example.gamedeals.BottomNavBar
+import com.example.gamedeals.Screen
+import com.example.gamedeals.database.AppDatabase
+import com.example.gamedeals.database.FavoritesRepository
+import com.example.gamedeals.ui.deals.DealsScreen
+import com.example.gamedeals.ui.favorites.FavoritesScreen
+import com.example.gamedeals.viewmodel.FavoritesViewModel
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,14 +104,28 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
     }
 }
 
+
+
 @Composable
 fun MainScreen(userEmail: String) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            "¡Bienvenido $userEmail!",
-            fontSize = 20.sp,
-            modifier = Modifier.padding(16.dp)
-        )
-        DealsScreen()
+    val navController = rememberNavController()
+    val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val repository = FavoritesRepository(db.favoriteDealDao())
+    val favoritesViewModel = remember { FavoritesViewModel(repository) }
+
+    Scaffold(bottomBar = { BottomNavBar(navController) }) { padding ->
+        NavHost(navController, startDestination = Screen.Home.route, modifier = Modifier.padding(padding)) {
+            composable(Screen.Home.route) {
+                DealsScreen(viewModel = favoritesViewModel)
+            }
+            composable(Screen.Favorites.route) {
+                FavoritesScreen(viewModel = favoritesViewModel)
+            }
+            composable(Screen.Profile.route) { ProfileScreen(userEmail) }
+            composable(Screen.Extra.route) { ExtraScreen() }
+        }
     }
 }
+
+

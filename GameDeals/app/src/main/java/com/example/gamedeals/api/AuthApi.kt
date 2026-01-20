@@ -5,7 +5,7 @@ import com.example.gamedeals.model.LoginResponse
 import retrofit2.http.Body
 import retrofit2.http.POST
 
-interface AuthApi {
+interface  AuthApi {
 
     @POST("login")
     suspend fun login(

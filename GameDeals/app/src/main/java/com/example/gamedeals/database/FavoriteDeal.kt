@@ -3,10 +3,9 @@ package com.example.gamedeals.database
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "favorites")
+@Entity(tableName = "favorite_deals")
 data class FavoriteDeal(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val title: String,
+    @PrimaryKey val title: String,
     val salePrice: String,
     val normalPrice: String,
     val storeID: String,

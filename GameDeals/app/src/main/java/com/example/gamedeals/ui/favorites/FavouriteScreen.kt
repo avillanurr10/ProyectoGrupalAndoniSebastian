@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,7 +26,6 @@ import com.example.gamedeals.viewmodel.FavoritesViewModel
 
 @Composable
 fun FavoritesScreen(viewModel: FavoritesViewModel) {
-    // Usamos el StateFlow 'favorites' que ya tienes en el ViewModel
     val favorites by viewModel.favorites.collectAsState(initial = emptyList())
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
@@ -41,9 +41,12 @@ fun FavoritesScreen(viewModel: FavoritesViewModel) {
                 Text("No tienes favoritos guardados", color = Color.Gray)
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 items(favorites) { deal ->
-                    FavoriteDealCard(deal)
+                    FavoriteDealCard(deal = deal, viewModel = viewModel)
                 }
             }
         }
@@ -51,7 +54,7 @@ fun FavoritesScreen(viewModel: FavoritesViewModel) {
 }
 
 @Composable
-fun FavoriteDealCard(deal: FavoriteDeal) {
+fun FavoriteDealCard(deal: FavoriteDeal, viewModel: FavoritesViewModel) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -77,7 +80,7 @@ fun FavoriteDealCard(deal: FavoriteDeal) {
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = deal.title,
                     fontSize = 16.sp,
@@ -88,7 +91,7 @@ fun FavoriteDealCard(deal: FavoriteDeal) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "$${deal.salePrice}",
-                        color = Color(0xFF2E7D32), // Verde para destacar la oferta
+                        color = Color(0xFF2E7D32),
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp
                     )
@@ -105,6 +108,14 @@ fun FavoriteDealCard(deal: FavoriteDeal) {
                     text = "Tienda: ${deal.storeID}",
                     fontSize = 11.sp,
                     color = Color.DarkGray
+                )
+            }
+
+            IconButton(onClick = { viewModel.removeFavorite(deal) }) {
+                androidx.compose.material3.Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.Delete,
+                    contentDescription = "Borrar",
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
         }

@@ -2,15 +2,15 @@ package com.example.gamedeals.database
 
 import kotlinx.coroutines.flow.Flow
 
-class FavoritesRepository(private val dao: FavoriteDealDao) {
+class FavoritesRepository(private val favoriteDealDao: FavoriteDealDao) {
 
-    val allFavorites: Flow<List<FavoriteDeal>> = dao.getAllFavorites()
+    val allFavorites: Flow<List<FavoriteDeal>> = favoriteDealDao.getAllFavorites()
 
-    suspend fun addFavorite(deal: FavoriteDeal) {
-        dao.insertFavorite(deal)
+    suspend fun addFavorite(favoriteDeal: FavoriteDeal) {
+        favoriteDealDao.addFavorite(favoriteDeal)
     }
 
-    suspend fun removeFavorite(deal: FavoriteDeal) {
-        dao.deleteFavorite(deal)
+    suspend fun removeFavorite(favoriteDeal: FavoriteDeal) {
+        favoriteDealDao.removeFavorite(favoriteDeal)
     }
 }

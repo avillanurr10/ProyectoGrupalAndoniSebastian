@@ -28,7 +28,9 @@ import com.example.gamedeals.database.AppDatabase
 import com.example.gamedeals.database.FavoritesRepository
 import com.example.gamedeals.ui.deals.DealsScreen
 import com.example.gamedeals.ui.favorites.FavoritesScreen
+import com.example.gamedeals.ui.theme.GameDealsTheme
 import com.example.gamedeals.viewmodel.FavoritesViewModel
+import com.example.gamedeals.viewmodel.ThemeViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,20 +47,27 @@ fun GameDealsApp() {
     var userEmail by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    if (!isLoggedIn) {
-        LoginScreen(
-            onLogin = { email, password ->
-                if (email == "admin@test.com" && password == "1234") {
-                    userEmail = email
-                    isLoggedIn = true
-                    Toast.makeText(context, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Credenciales incorrectas (admin@test.com / 1234)", Toast.LENGTH_SHORT).show()
+    // Inicializar ThemeViewModel
+    val themeViewModel = remember { ThemeViewModel(context) }
+    val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+
+    // Envolver toda la app con el tema
+    GameDealsTheme(darkTheme = isDarkTheme) {
+        if (!isLoggedIn) {
+            LoginScreen(
+                onLogin = { email, password ->
+                    if (email == "admin@test.com" && password == "1234") {
+                        userEmail = email
+                        isLoggedIn = true
+                        Toast.makeText(context, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Credenciales incorrectas (admin@test.com / 1234)", Toast.LENGTH_SHORT).show()
+                    }
                 }
-            }
-        )
-    } else {
-        MainScreen(userEmail)
+            )
+        } else {
+            MainScreen(userEmail, themeViewModel)
+        }
     }
 }
 
@@ -125,7 +134,7 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(userEmail: String) {
+fun MainScreen(userEmail: String, themeViewModel: ThemeViewModel) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
@@ -156,7 +165,7 @@ fun MainScreen(userEmail: String) {
                 FavoritesScreen(viewModel = favoritesViewModel)
             }
             composable(Screen.Profile.route) {
-                ProfileScreen(userEmail)
+                ProfileScreen(userEmail, themeViewModel)
             }
             composable(Screen.Extra.route) {
                 ExtraScreen()

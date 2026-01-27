@@ -6,12 +6,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -23,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.example.gamedeals.database.FavoriteDeal
+import com.example.gamedeals.ui.deals.components.PriceAlertDialog
+import com.example.gamedeals.viewmodel.AlertsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
 
 @Composable
@@ -35,10 +36,30 @@ fun DealCard(
     thumb: String,
     savings: String?,
     dealID: String,
-    viewModel: FavoritesViewModel
+    favoritesViewModel: FavoritesViewModel,
+    alertsViewModel: AlertsViewModel
 ) {
     val uriHandler = LocalUriHandler.current
+    var showAlertDialog by remember { mutableStateOf(false) }
     val discountPercent = savings?.toFloatOrNull()?.toInt() ?: 0
+
+    if (showAlertDialog) {
+        PriceAlertDialog(
+            gameTitle = title,
+            currentPrice = salePrice,
+            onDismiss = { showAlertDialog = false },
+            onConfirm = { targetPrice ->
+                alertsViewModel.addAlert(
+                    gameTitle = title,
+                    targetPrice = targetPrice,
+                    currentPrice = salePrice.toDoubleOrNull() ?: 0.0,
+                    dealID = dealID,
+                    thumb = thumb
+                )
+                showAlertDialog = false
+            }
+        )
+    }
 
     Card(
         modifier = Modifier
@@ -132,30 +153,47 @@ fun DealCard(
                 ) {
                     Text(
                         text = "$$salePrice",
-                        fontSize = 28.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF2E7D32)
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = "$$normalPrice",
                         fontSize = 16.sp,
                         textDecoration = TextDecoration.LineThrough,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
 
                 // Tienda
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = storeName,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            text = storeName,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { showAlertDialog = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.NotificationsActive,
+                            contentDescription = "Poner alerta",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 // Botones
@@ -165,7 +203,7 @@ fun DealCard(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            viewModel.addFavorite(
+                            favoritesViewModel.addFavorite(
                                 FavoriteDeal(
                                     title = title,
                                     salePrice = salePrice,

@@ -16,6 +16,31 @@ data class Deal(
     val dealID: String
 )
 
+data class DealDetail(
+    val gameInfo: GameInfo,
+    val cheaperStores: List<CheaperStore>
+)
+
+data class GameInfo(
+    val storeID: String,
+    val gameID: String,
+    val title: String,
+    val salePrice: String,
+    val normalPrice: String,
+    val metacriticScore: String?,
+    val steamRatingText: String?,
+    val steamRatingPercent: String?,
+    val steamRatingCount: String?,
+    val thumb: String
+)
+
+data class CheaperStore(
+    val storeID: String,
+    val dealID: String,
+    val salePrice: String,
+    val normalPrice: String
+)
+
 data class Store(
     val storeID: String,
     val storeName: String,
@@ -29,6 +54,11 @@ interface CheapSharkApi {
         @Query("upperPrice") upperPrice: String? = null,
         @Query("pageSize") pageSize: Int = 60
     ): List<Deal>
+
+    @GET("deals")
+    suspend fun getDealLookup(
+        @Query("id") dealID: String
+    ): DealDetail
 
     @GET("stores")
     suspend fun getStores(): List<Store>

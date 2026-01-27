@@ -1,7 +1,7 @@
 package com.example.gamedeals.ui.main
 
-import ExtraScreen
-import ProfileScreen
+import com.example.gamedeals.ExtraScreen
+import com.example.gamedeals.ProfileScreen
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -24,11 +24,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.*
 import com.example.gamedeals.BottomNavBar
 import com.example.gamedeals.Screen
+import com.example.gamedeals.database.AlertsRepository
 import com.example.gamedeals.database.AppDatabase
 import com.example.gamedeals.database.FavoritesRepository
 import com.example.gamedeals.ui.deals.DealsScreen
 import com.example.gamedeals.ui.favorites.FavoritesScreen
 import com.example.gamedeals.ui.theme.GameDealsTheme
+import com.example.gamedeals.viewmodel.AlertsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
 import com.example.gamedeals.viewmodel.ThemeViewModel
 
@@ -66,7 +68,10 @@ fun GameDealsApp() {
                 }
             )
         } else {
-            MainScreen(userEmail, themeViewModel)
+            val db = AppDatabase.getDatabase(context)
+            val repository = remember { AlertsRepository(db.priceAlertDao()) }
+            val alertsViewModel = remember { AlertsViewModel(repository) }
+            MainScreen(userEmail, themeViewModel, alertsViewModel)
         }
     }
 }
@@ -134,7 +139,7 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(userEmail: String, themeViewModel: ThemeViewModel) {
+fun MainScreen(userEmail: String, themeViewModel: ThemeViewModel, alertsViewModel: AlertsViewModel) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
@@ -159,7 +164,13 @@ fun MainScreen(userEmail: String, themeViewModel: ThemeViewModel) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Home.route) {
-                DealsScreen(viewModel = favoritesViewModel)
+                DealsScreen(
+                    favoritesViewModel = favoritesViewModel, 
+                    alertsViewModel = alertsViewModel,
+                    onDealClick = { dealID -> 
+                        navController.navigate(Screen.GameDetail.createRoute(dealID)) 
+                    }
+                )
             }
             composable(Screen.Favorites.route) {
                 FavoritesScreen(viewModel = favoritesViewModel)
@@ -168,7 +179,19 @@ fun MainScreen(userEmail: String, themeViewModel: ThemeViewModel) {
                 ProfileScreen(userEmail, themeViewModel)
             }
             composable(Screen.Extra.route) {
-                ExtraScreen()
+                ExtraScreen(alertsViewModel = alertsViewModel)
+            }
+            composable(
+                route = Screen.GameDetail.route,
+                arguments = listOf(navArgument("dealID") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val dealID = backStackEntry.arguments?.getString("dealID") ?: ""
+                GameDetailScreen(
+                    dealID = dealID,
+                    favoritesViewModel = favoritesViewModel,
+                    alertsViewModel = alertsViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

@@ -1,9 +1,12 @@
 package com.example.gamedeals.ui.deals
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,6 +20,8 @@ import com.example.gamedeals.ui.deals.components.DealCard
 import com.example.gamedeals.ui.deals.components.FilterDialog
 import com.example.gamedeals.ui.deals.components.SearchBar
 import com.example.gamedeals.ui.deals.models.*
+import com.example.gamedeals.viewmodel.AlertsViewModel
+import com.example.gamedeals.viewmodel.DealsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -25,44 +30,24 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DealsScreen(viewModel: FavoritesViewModel) {
-    // Estados de datos
-    var deals by remember { mutableStateOf<List<Deal>>(emptyList()) }
-    var storeMap by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var hasError by remember { mutableStateOf(false) }
+fun DealsScreen(
+    favoritesViewModel: FavoritesViewModel,
+    dealsViewModel: DealsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    alertsViewModel: AlertsViewModel
+) {
+    // Estados de datos obtenidos del ViewModel
+    val deals by dealsViewModel.deals.collectAsState()
+    val storeMap by dealsViewModel.storeMap.collectAsState()
+    val isLoading by dealsViewModel.isLoading.collectAsState()
+    val hasError by dealsViewModel.hasError.collectAsState()
 
-    // Estados de filtros
+    // Estados de filtros (Restaurados)
     var searchQuery by remember { mutableStateOf("") }
     var maxPrice by remember { mutableStateOf(60f) }
     var selectedStores by remember { mutableStateOf<Set<String>>(emptySet()) }
     var minDiscount by remember { mutableStateOf(0f) }
     var sortOption by remember { mutableStateOf(SortOption.HIGHEST_DISCOUNT) }
     var showFilterDialog by remember { mutableStateOf(false) }
-
-    val scope = rememberCoroutineScope()
-
-    // Cargar datos
-    fun loadData() {
-        scope.launch {
-            isLoading = true
-            hasError = false
-            try {
-                withContext(Dispatchers.IO) {
-                    val dealsDeferred = async { RetrofitClient.api.getDeals() }
-                    val storesDeferred = async { RetrofitClient.api.getStores() }
-                    deals = dealsDeferred.await()
-                    storeMap = storesDeferred.await().associate { it.storeID to it.storeName }
-                }
-            } catch (e: Exception) {
-                hasError = true
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) { loadData() }
 
     // Aplicar filtros
     val filteredDeals = remember(deals, searchQuery, maxPrice, selectedStores, minDiscount, sortOption) {
@@ -116,18 +101,27 @@ fun DealsScreen(viewModel: FavoritesViewModel) {
             )
         }
 
-        Divider(modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         // Contenido principal
         Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                hasError -> ErrorState(onRetry = { loadData() })
-                filteredDeals.isEmpty() && !isLoading -> EmptyState()
-                else -> DealsList(
-                    deals = filteredDeals,
-                    storeMap = storeMap,
-                    viewModel = viewModel
-                )
+            Crossfade(targetState = isLoading) { loading ->
+                if (loading && deals.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    when {
+                        hasError -> ErrorState(onRetry = { dealsViewModel.refreshData() })
+                        filteredDeals.isEmpty() -> EmptyState()
+                        else -> DealsList(
+                            deals = filteredDeals,
+                            storeMap = storeMap,
+                            favoritesViewModel = favoritesViewModel,
+                            alertsViewModel = alertsViewModel
+                        )
+                    }
+                }
             }
         }
     }
@@ -258,25 +252,36 @@ private fun ActiveFilterChips(
 private fun DealsList(
     deals: List<Deal>,
     storeMap: Map<String, String>,
-    viewModel: FavoritesViewModel
+    favoritesViewModel: FavoritesViewModel,
+    alertsViewModel: AlertsViewModel
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(deals) { deal ->
-            DealCard(
-                title = deal.title,
-                salePrice = deal.salePrice,
-                normalPrice = deal.normalPrice,
-                storeID = deal.storeID,
-                storeName = storeMap[deal.storeID] ?: "Tienda ${deal.storeID}",
-                thumb = deal.thumb,
-                savings = deal.savings,
-                dealID = deal.dealID,
-                viewModel = viewModel
-            )
+        itemsIndexed(deals, key = { _, deal -> deal.dealID }) { index, deal ->
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(300, delayMillis = (index % 10) * 50)) +
+                        slideInVertically(
+                            initialOffsetY = { it / 2 },
+                            animationSpec = tween(300, delayMillis = (index % 10) * 50)
+                        )
+            ) {
+                DealCard(
+                    title = deal.title,
+                    salePrice = deal.salePrice,
+                    normalPrice = deal.normalPrice,
+                    storeID = deal.storeID,
+                    storeName = storeMap[deal.storeID] ?: "Tienda ${deal.storeID}",
+                    thumb = deal.thumb,
+                    savings = deal.savings,
+                    dealID = deal.dealID,
+                    favoritesViewModel = favoritesViewModel,
+                    alertsViewModel = alertsViewModel
+                )
+            }
         }
     }
 }

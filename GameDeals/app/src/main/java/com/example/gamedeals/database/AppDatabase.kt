@@ -5,7 +5,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import android.content.Context
 
-@Database(entities = [FavoriteDeal::class, PriceAlert::class], version = 2, exportSchema = false)
+@Database(entities = [FavoriteDeal::class, PriceAlert::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun favoriteDealDao(): FavoriteDealDao

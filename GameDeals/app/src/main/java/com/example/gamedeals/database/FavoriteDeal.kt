@@ -9,5 +9,6 @@ data class FavoriteDeal(
     val salePrice: String,
     val normalPrice: String,
     val storeID: String,
-    val thumb: String
+    val thumb: String,
+    val dealID: String
 )

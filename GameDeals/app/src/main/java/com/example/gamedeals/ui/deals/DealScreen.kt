@@ -5,7 +5,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,135 +12,155 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gamedeals.ui.deals.components.DealCard
-import com.example.gamedeals.ui.deals.components.FilterDialog
+import com.example.gamedeals.ui.deals.components.FilterBottomSheet
 import com.example.gamedeals.ui.deals.components.SearchBar
 import com.example.gamedeals.ui.deals.models.*
 import com.example.gamedeals.viewmodel.AlertsViewModel
 import com.example.gamedeals.viewmodel.DealsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DealsScreen(
     favoritesViewModel: FavoritesViewModel,
     dealsViewModel: DealsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    alertsViewModel: AlertsViewModel
+    alertsViewModel: AlertsViewModel,
+    onDealClick: (String) -> Unit
 ) {
-    // Estados de datos obtenidos del ViewModel
-    val deals by dealsViewModel.deals.collectAsState()
+    // Estados del ViewModel
+    val filteredDeals by dealsViewModel.filteredDeals.collectAsState()
     val storeMap by dealsViewModel.storeMap.collectAsState()
     val isLoading by dealsViewModel.isLoading.collectAsState()
     val hasError by dealsViewModel.hasError.collectAsState()
+    val activeFiltersCount by dealsViewModel.activeFiltersCount.collectAsState()
+    
+    // Estados de UI
+    val searchQuery by dealsViewModel.searchQuery.collectAsState()
+    val sortOption by dealsViewModel.sortOption.collectAsState()
+    var showFilterSheet by remember { mutableStateOf(false) }
+    
+    // Estado para animación de la suerte
+    val scope = rememberCoroutineScope()
+    var isShuffling by remember { mutableStateOf(false) }
+    val rotation = remember { Animatable(0f) }
 
-    // Estados de filtros (Restaurados)
-    var searchQuery by remember { mutableStateOf("") }
-    var maxPrice by remember { mutableStateOf(60f) }
-    var selectedStores by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var minDiscount by remember { mutableStateOf(0f) }
-    var sortOption by remember { mutableStateOf(SortOption.HIGHEST_DISCOUNT) }
-    var showFilterDialog by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { dealsViewModel.searchQuery.value = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
 
-    // Aplicar filtros
-    val filteredDeals = remember(deals, searchQuery, maxPrice, selectedStores, minDiscount, sortOption) {
-        deals
-            .filter { it.title.contains(searchQuery, ignoreCase = true) }
-            .filter { it.salePrice.toFloatOrNull()?.let { price -> price <= maxPrice } ?: true }
-            .filter { selectedStores.isEmpty() || it.storeID in selectedStores }
-            .filter { (it.savings?.toFloatOrNull() ?: 0f) >= minDiscount }
-            .let { filtered ->
-                when (sortOption) {
-                    SortOption.HIGHEST_DISCOUNT -> filtered.sortedByDescending { it.savings?.toFloatOrNull() ?: 0f }
-                    SortOption.LOWEST_PRICE -> filtered.sortedBy { it.salePrice.toFloatOrNull() ?: Float.MAX_VALUE }
-                    SortOption.ALPHABETICAL -> filtered.sortedBy { it.title }
+            FilterControls(
+                activeFiltersCount = activeFiltersCount,
+                sortOption = sortOption,
+                onFilterClick = { showFilterSheet = true },
+                onSortChange = { dealsViewModel.sortOption.value = it },
+                resultCount = filteredDeals.size
+            )
+
+            if (activeFiltersCount > 0) {
+                val maxPrice by dealsViewModel.maxPrice.collectAsState()
+                val minDiscount by dealsViewModel.minDiscount.collectAsState()
+                val selectedStores by dealsViewModel.selectedStores.collectAsState()
+                val minMetacritic by dealsViewModel.minMetacritic.collectAsState()
+
+                ActiveFilterChips(
+                    maxPrice = maxPrice,
+                    minDiscount = minDiscount,
+                    minMetacritic = minMetacritic,
+                    selectedStoresCount = selectedStores.size,
+                    onClearMaxPrice = { dealsViewModel.maxPrice.value = 60f },
+                    onClearMinDiscount = { dealsViewModel.minDiscount.value = 0f },
+                    onClearMinMetacritic = { dealsViewModel.minMetacritic.value = 0f },
+                    onClearStores = { dealsViewModel.selectedStores.value = emptySet() }
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                Crossfade(targetState = isLoading) { loading ->
+                    if (loading && filteredDeals.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        when {
+                            hasError -> ErrorState(onRetry = { dealsViewModel.refreshData() })
+                            filteredDeals.isEmpty() -> EmptyState()
+                            else -> DealsList(
+                                deals = filteredDeals,
+                                storeMap = storeMap,
+                                favoritesViewModel = favoritesViewModel,
+                                alertsViewModel = alertsViewModel,
+                                onDealClick = onDealClick
+                            )
+                        }
+                    }
                 }
             }
-    }
+        }
 
-    val activeFiltersCount = listOfNotNull(
-        if (searchQuery.isNotEmpty()) 1 else null,
-        if (maxPrice < 60f) 1 else null,
-        if (selectedStores.isNotEmpty()) 1 else null,
-        if (minDiscount > 0f) 1 else null
-    ).size
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Barra de búsqueda
-        SearchBar(
-            query = searchQuery,
-            onQueryChange = { searchQuery = it },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
-
-        // Controles de filtro y ordenamiento
-        FilterControls(
-            activeFiltersCount = activeFiltersCount,
-            sortOption = sortOption,
-            onFilterClick = { showFilterDialog = true },
-            onSortChange = { sortOption = it },
-            resultCount = filteredDeals.size
-        )
-
-        // Chips de filtros activos
-        if (activeFiltersCount > 0) {
-            ActiveFilterChips(
-                maxPrice = maxPrice,
-                minDiscount = minDiscount,
-                selectedStoresCount = selectedStores.size,
-                onClearMaxPrice = { maxPrice = 60f },
-                onClearMinDiscount = { minDiscount = 0f },
-                onClearStores = { selectedStores = emptySet() }
+        // --- BOTÓN DE LA SUERTE ---
+        FloatingActionButton(
+            onClick = {
+                if (!isShuffling) {
+                    scope.launch {
+                        isShuffling = true
+                        // Animación de rotación rápida
+                        rotation.animateTo(
+                            targetValue = rotation.value + 360f,
+                            animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
+                        )
+                        val luckyDeal = dealsViewModel.getRandomDeal()
+                        if (luckyDeal != null) {
+                            onDealClick(luckyDeal.dealID)
+                        }
+                        isShuffling = false
+                    }
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .graphicsLayer(rotationZ = rotation.value),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ) {
+            Icon(
+                imageVector = if (isShuffling) Icons.Default.Casino else Icons.Default.AutoAwesome,
+                contentDescription = "Botón de la suerte",
+                modifier = Modifier.size(28.dp)
             )
         }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-        // Contenido principal
-        Box(modifier = Modifier.fillMaxSize()) {
-            Crossfade(targetState = isLoading) { loading ->
-                if (loading && deals.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    when {
-                        hasError -> ErrorState(onRetry = { dealsViewModel.refreshData() })
-                        filteredDeals.isEmpty() -> EmptyState()
-                        else -> DealsList(
-                            deals = filteredDeals,
-                            storeMap = storeMap,
-                            favoritesViewModel = favoritesViewModel,
-                            alertsViewModel = alertsViewModel
-                        )
-                    }
-                }
-            }
-        }
     }
 
-    // Diálogo de filtros
-    if (showFilterDialog) {
-        FilterDialog(
+    if (showFilterSheet) {
+        val maxPrice by dealsViewModel.maxPrice.collectAsState()
+        val minDiscount by dealsViewModel.minDiscount.collectAsState()
+        val minMetacritic by dealsViewModel.minMetacritic.collectAsState()
+        val selectedStores by dealsViewModel.selectedStores.collectAsState()
+
+        FilterBottomSheet(
             maxPrice = maxPrice,
-            onMaxPriceChange = { maxPrice = it },
+            onMaxPriceChange = { dealsViewModel.maxPrice.value = it },
             minDiscount = minDiscount,
-            onMinDiscountChange = { minDiscount = it },
+            onMinDiscountChange = { dealsViewModel.minDiscount.value = it },
+            minMetacritic = minMetacritic,
+            onMinMetacriticChange = { dealsViewModel.minMetacritic.value = it },
             availableStores = storeMap,
             selectedStores = selectedStores,
-            onStoresChange = { selectedStores = it },
-            onDismiss = { showFilterDialog = false },
-            onClearAll = {
-                maxPrice = 60f
-                minDiscount = 0f
-                selectedStores = emptySet()
-            }
+            onStoresChange = { dealsViewModel.selectedStores.value = it },
+            onDismiss = { showFilterSheet = false },
+            onClearAll = { dealsViewModel.clearFilters() }
         )
     }
 }
@@ -208,9 +227,11 @@ private fun FilterControls(
 private fun ActiveFilterChips(
     maxPrice: Float,
     minDiscount: Float,
+    minMetacritic: Float,
     selectedStoresCount: Int,
     onClearMaxPrice: () -> Unit,
     onClearMinDiscount: () -> Unit,
+    onClearMinMetacritic: () -> Unit,
     onClearStores: () -> Unit
 ) {
     LazyRow(
@@ -236,6 +257,15 @@ private fun ActiveFilterChips(
                 )
             }
         }
+        if (minMetacritic > 0f) {
+            item {
+                AssistChip(
+                    onClick = onClearMinMetacritic,
+                    label = { Text("Meta: ${minMetacritic.toInt()}+") },
+                    trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) }
+                )
+            }
+        }
         if (selectedStoresCount > 0) {
             item {
                 AssistChip(
@@ -253,7 +283,8 @@ private fun DealsList(
     deals: List<Deal>,
     storeMap: Map<String, String>,
     favoritesViewModel: FavoritesViewModel,
-    alertsViewModel: AlertsViewModel
+    alertsViewModel: AlertsViewModel,
+    onDealClick: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -278,8 +309,10 @@ private fun DealsList(
                     thumb = deal.thumb,
                     savings = deal.savings,
                     dealID = deal.dealID,
+                    metacriticScore = deal.metacriticScore,
                     favoritesViewModel = favoritesViewModel,
-                    alertsViewModel = alertsViewModel
+                    alertsViewModel = alertsViewModel,
+                    onDealClick = onDealClick
                 )
             }
         }

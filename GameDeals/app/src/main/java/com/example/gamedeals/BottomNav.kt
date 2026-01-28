@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -49,6 +50,7 @@ fun BottomNavBar(navController: NavController) {
                             Screen.Favorites -> Icons.Default.Favorite
                             Screen.Profile -> Icons.Default.Person
                             Screen.Extra -> Icons.Default.Add
+                            Screen.GameDetail -> Icons.Default.Info // Not used in bottom nav but required for exhaustiveness
                         },
                         contentDescription = screen.title,
                         // Animación sutil de escala si está seleccionado

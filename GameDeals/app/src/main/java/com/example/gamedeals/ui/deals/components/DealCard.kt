@@ -36,8 +36,10 @@ fun DealCard(
     thumb: String,
     savings: String?,
     dealID: String,
+    metacriticScore: String?,
     favoritesViewModel: FavoritesViewModel,
-    alertsViewModel: AlertsViewModel
+    alertsViewModel: AlertsViewModel,
+    onDealClick: (String) -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
     var showAlertDialog by remember { mutableStateOf(false) }
@@ -65,6 +67,7 @@ fun DealCard(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
+        onClick = { onDealClick(dealID) },
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.elevatedCardElevation(
             defaultElevation = 6.dp,
@@ -121,6 +124,48 @@ fun DealCard(
                             fontWeight = FontWeight.ExtraBold,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
+                    }
+                }
+
+                // Hotness Badge (Epic Deal)
+                val isEpicDeal = remember(savings, metacriticScore) {
+                    val savingsVal = savings?.toFloatOrNull() ?: 0f
+                    val metaVal = metacriticScore?.toIntOrNull() ?: 0
+                    savingsVal >= 90f || (savingsVal >= 75f && metaVal >= 85)
+                }
+
+                if (isEpicDeal) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(12.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Transparent
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color(0xFFFF8F00), Color(0xFFFF3D00))
+                                    )
+                                )
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Whatshot,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "OFERTA ÉPICA",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
                     }
                 }
 
@@ -209,7 +254,8 @@ fun DealCard(
                                     salePrice = salePrice,
                                     normalPrice = normalPrice,
                                     storeID = storeID,
-                                    thumb = thumb
+                                    thumb = thumb,
+                                    dealID = dealID
                                 )
                             )
                         },

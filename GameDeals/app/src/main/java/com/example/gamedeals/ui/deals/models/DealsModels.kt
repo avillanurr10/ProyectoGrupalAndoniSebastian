@@ -1,5 +1,6 @@
 package com.example.gamedeals.ui.deals.models
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
@@ -13,7 +14,8 @@ data class Deal(
     val storeID: String,
     val thumb: String,
     val savings: String? = null,
-    val dealID: String
+    val dealID: String,
+    val metacriticScore: String? = null
 )
 
 data class DealDetail(
@@ -24,9 +26,9 @@ data class DealDetail(
 data class GameInfo(
     val storeID: String,
     val gameID: String,
-    val title: String,
+    @SerializedName("name") val title: String,
     val salePrice: String,
-    val normalPrice: String,
+    @SerializedName("retailPrice") val normalPrice: String,
     val metacriticScore: String?,
     val steamRatingText: String?,
     val steamRatingPercent: String?,
@@ -38,7 +40,7 @@ data class CheaperStore(
     val storeID: String,
     val dealID: String,
     val salePrice: String,
-    val normalPrice: String
+    @SerializedName("retailPrice") val normalPrice: String
 )
 
 data class Store(

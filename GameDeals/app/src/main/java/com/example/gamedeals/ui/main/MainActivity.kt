@@ -1,5 +1,6 @@
 package com.example.gamedeals.ui.main
 
+
 import ExtraScreen
 import ProfileScreen
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -29,6 +31,7 @@ import com.example.gamedeals.database.FavoritesRepository
 import com.example.gamedeals.ui.deals.DealsScreen
 import com.example.gamedeals.ui.favorites.FavoritesScreen
 import com.example.gamedeals.viewmodel.FavoritesViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,31 +44,40 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun GameDealsApp() {
-    var isLoggedIn by remember { mutableStateOf(false) }
-    var userEmail by remember { mutableStateOf("") }
-    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    var isLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
+    var userEmail by remember { mutableStateOf(auth.currentUser?.email ?: "") }
+    var currentScreen by remember { mutableStateOf("login") } // login, register, main
 
-    if (!isLoggedIn) {
-        LoginScreen(
-            onLogin = { email, password ->
-                if (email == "admin@test.com" && password == "1234") {
+    if (isLoggedIn) {
+        MainScreen(userEmail)
+    } else {
+        when (currentScreen) {
+            "login" -> LoginScreen(
+                onLoginSuccess = { email ->
                     userEmail = email
                     isLoggedIn = true
-                    Toast.makeText(context, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Credenciales incorrectas (admin@test.com / 1234)", Toast.LENGTH_SHORT).show()
-                }
-            }
-        )
-    } else {
-        MainScreen(userEmail)
+                },
+                onNavigateToRegister = { currentScreen = "register" }
+            )
+            "register" -> RegisterScreen(
+                onRegisterSuccess = { email ->
+                    userEmail = email
+                    isLoggedIn = true
+                },
+                onNavigateToLogin = { currentScreen = "login" }
+            )
+        }
     }
 }
 
 @Composable
-fun LoginScreen(onLogin: (String, String) -> Unit) {
+fun LoginScreen(onLoginSuccess: (String) -> Unit, onNavigateToRegister: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
@@ -114,11 +126,126 @@ fun LoginScreen(onLogin: (String, String) -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = { onLogin(email, password) },
+            onClick = {
+                if (email.isNotEmpty() && password.isNotEmpty()) {
+                    isLoading = true
+                    auth.signInWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                onLoginSuccess(email)
+                                Toast.makeText(context, "Bienvenido de nuevo", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                } else {
+                    Toast.makeText(context, "Por favor llena todos los campos", Toast.LENGTH_SHORT).show()
+                }
+            },
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            enabled = !isLoading
         ) {
-            Text("Iniciar sesión", fontSize = 16.sp)
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+            } else {
+                Text("Iniciar sesión", fontSize = 16.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        TextButton(onClick = onNavigateToRegister) {
+            Text("¿No tienes cuenta? Regístrate aquí")
+        }
+    }
+}
+
+@Composable
+fun RegisterScreen(onRegisterSuccess: (String) -> Unit, onNavigateToLogin: () -> Unit) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    var isLoading by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Crear Cuenta",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Contraseña") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = {
+                if (email.isNotEmpty() && password.isNotEmpty()) {
+                    if (password.length < 6) {
+                        Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
+                    } else {
+                        isLoading = true
+                        auth.createUserWithEmailAndPassword(email, password)
+                            .addOnCompleteListener { task ->
+                                isLoading = false
+                                if (task.isSuccessful) {
+                                    onRegisterSuccess(email)
+                                    Toast.makeText(context, "Cuenta creada exitosamente", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                    }
+                } else {
+                    Toast.makeText(context, "Por favor llena todos los campos", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(12.dp),
+            enabled = !isLoading
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+            } else {
+                Text("Registrarse", fontSize = 16.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        TextButton(onClick = onNavigateToLogin) {
+            Text("¿Ya tienes cuenta? Inicia sesión")
         }
     }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "473660346665",
+    "project_id": "proyectogrupalandonisebastian",
+    "storage_bucket": "proyectogrupalandonisebastian.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:473660346665:android:40e56d16f5bad250f2a738",
+        "android_client_info": {
+          "package_name": "com.example.gamedeals"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIBGYKQaxCufJgjGkVpYSqk6KYTr-Urfo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

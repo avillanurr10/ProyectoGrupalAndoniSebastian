@@ -33,7 +33,6 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-// --- MODELO Y API ---
 data class Deal(
     val title: String,
     val salePrice: String,

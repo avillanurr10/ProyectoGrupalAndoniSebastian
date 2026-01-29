@@ -215,7 +215,8 @@ fun DealCardImproved(deal: Deal, viewModel: FavoritesViewModel, storeName: Strin
                                 salePrice = deal.salePrice,
                                 normalPrice = deal.normalPrice,
                                 storeID = deal.storeID,
-                                thumb = deal.thumb
+                                thumb = deal.thumb,
+                                userEmail = "" // ViewModel se encarga de asignar el usuario correcto
                             )
                         )
                     },

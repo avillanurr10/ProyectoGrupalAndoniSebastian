@@ -13,11 +13,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun ProfileScreen(email: String) {
-    Box(
+fun ProfileScreen(email: String, onLogout: () -> Unit) {
+    Column(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Usuario: $email")
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(onClick = onLogout) {
+            Text("Cerrar Sesión")
+        }
     }
 }

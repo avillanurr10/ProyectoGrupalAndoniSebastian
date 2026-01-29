@@ -50,7 +50,16 @@ fun GameDealsApp() {
     var currentScreen by remember { mutableStateOf("login") } // login, register, main
 
     if (isLoggedIn) {
-        MainScreen(userEmail)
+        MainScreen(
+            userEmail = userEmail,
+            onLogout = {
+                auth.signOut()
+                isLoggedIn = false
+                userEmail = ""
+                // Opcional: reiniciar currentScreen si se desea volver específicamente a login
+                currentScreen = "login" 
+            }
+        )
     } else {
         when (currentScreen) {
             "login" -> LoginScreen(
@@ -252,13 +261,16 @@ fun RegisterScreen(onRegisterSuccess: (String) -> Unit, onNavigateToLogin: () ->
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(userEmail: String) {
+fun MainScreen(userEmail: String, onLogout: () -> Unit) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
     val db = remember { AppDatabase.getDatabase(context) }
     val repository = remember { FavoritesRepository(db.favoriteDealDao()) }
-    val favoritesViewModel = remember { FavoritesViewModel(repository) }
+    // Reinicializamos el ViewModel cuando cambia el usuario (o el contexto/db)
+    val favoritesViewModel = remember(userEmail) { 
+        FavoritesViewModel(repository, userEmail)
+    }
 
     Scaffold(
         topBar = {
@@ -283,7 +295,7 @@ fun MainScreen(userEmail: String) {
                 FavoritesScreen(viewModel = favoritesViewModel)
             }
             composable(Screen.Profile.route) {
-                ProfileScreen(userEmail)
+                ProfileScreen(email = userEmail, onLogout = onLogout)
             }
             composable(Screen.Extra.route) {
                 ExtraScreen()

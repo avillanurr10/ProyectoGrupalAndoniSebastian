@@ -44,19 +44,26 @@ fun BottomNavBar(navController: NavController) {
 
             NavigationBarItem(
                 icon = {
+                    val scale by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = if (isSelected) 1.25f else 1.0f,
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                        ),
+                        label = "IconScale"
+                    )
                     Icon(
                         imageVector = when (screen) {
                             Screen.Home -> Icons.Default.Home
                             Screen.Favorites -> Icons.Default.Favorite
                             Screen.Profile -> Icons.Default.Person
                             Screen.Extra -> Icons.Default.Add
-                            Screen.GameDetail -> Icons.Default.Info // Not used in bottom nav but required for exhaustiveness
+                            Screen.GameDetail -> Icons.Default.Info
                         },
                         contentDescription = screen.title,
-                        // Animación sutil de escala si está seleccionado
                         modifier = Modifier.graphicsLayer {
-                            scaleX = if (isSelected) 1.2f else 1.0f
-                            scaleY = if (isSelected) 1.2f else 1.0f
+                            scaleX = scale
+                            scaleY = scale
                         }
                     )
                 },

@@ -53,6 +53,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.compose.animation.core)
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // Navigation Compose

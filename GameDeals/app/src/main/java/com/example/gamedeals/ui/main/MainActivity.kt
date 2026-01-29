@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -85,59 +87,114 @@ fun GameDealsApp() {
 fun LoginScreen(onLogin: (String, String) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Gamepad,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Text(
-            text = "GameDeals",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Contraseña") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { onLogin(email, password) },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = visible,
+            enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(1000)) + 
+                    androidx.compose.animation.slideInVertically(initialOffsetY = { it / 2 })
         ) {
-            Text("Iniciar sesión", fontSize = 16.sp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    modifier = Modifier.size(120.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Gamepad,
+                            contentDescription = null,
+                            modifier = Modifier.size(80.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "GameDeals",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 2.sp
+                )
+
+                Text(
+                    text = "Tu próximo juego al mejor precio",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(48.dp))
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Contraseña") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = { onLogin(email, password) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                ) {
+                    Text("Iniciar sesión", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
@@ -156,56 +213,71 @@ fun MainScreen(userEmail: String, themeViewModel: ThemeViewModel, alertsViewMode
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("GameDeals", fontWeight = FontWeight.ExtraBold) },
+                title = { 
+                    Text(
+                        "GameDeals", 
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.headlineSmall
+                    ) 
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary
                 )
             )
         },
         bottomBar = { BottomNavBar(navController) }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Home.route) {
-                DealsScreen(
-                    favoritesViewModel = favoritesViewModel, 
-                    dealsViewModel = dealsViewModel,
-                    alertsViewModel = alertsViewModel,
-                    onDealClick = { dealID -> 
-                        navController.navigate(Screen.GameDetail.createRoute(dealID)) 
-                    }
-                )
-            }
-            composable(Screen.Favorites.route) {
-                FavoritesScreen(
-                    viewModel = favoritesViewModel,
-                    onDealClick = { dealID -> 
-                        navController.navigate(Screen.GameDetail.createRoute(dealID)) 
-                    }
-                )
-            }
-            composable(Screen.Profile.route) {
-                ProfileScreen(userEmail, themeViewModel)
-            }
-            composable(Screen.Extra.route) {
-                ExtraScreen(alertsViewModel = alertsViewModel)
-            }
-            composable(
-                route = Screen.GameDetail.route,
-                arguments = listOf(navArgument("dealID") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val dealID = backStackEntry.arguments?.getString("dealID") ?: ""
-                val storeMap by dealsViewModel.storeMap.collectAsState()
-                GameDetailScreen(
-                    dealID = dealID,
-                    storeMap = storeMap,
-                    favoritesViewModel = favoritesViewModel,
-                    alertsViewModel = alertsViewModel,
-                    onBack = { navController.popBackStack() }
-                )
+        Box(modifier = Modifier.padding(innerPadding)) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Home.route,
+                enterTransition = {
+                    androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) +
+                            androidx.compose.animation.scaleIn(initialScale = 0.95f)
+                },
+                exitTransition = {
+                    androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
+                }
+            ) {
+                composable(Screen.Home.route) {
+                    DealsScreen(
+                        favoritesViewModel = favoritesViewModel, 
+                        dealsViewModel = dealsViewModel,
+                        alertsViewModel = alertsViewModel,
+                        onDealClick = { dealID -> 
+                            navController.navigate(Screen.GameDetail.createRoute(dealID)) 
+                        }
+                    )
+                }
+                composable(Screen.Favorites.route) {
+                    FavoritesScreen(
+                        viewModel = favoritesViewModel,
+                        onDealClick = { dealID -> 
+                            navController.navigate(Screen.GameDetail.createRoute(dealID)) 
+                        }
+                    )
+                }
+                composable(Screen.Profile.route) {
+                    ProfileScreen(userEmail, themeViewModel)
+                }
+                composable(Screen.Extra.route) {
+                    ExtraScreen(alertsViewModel = alertsViewModel)
+                }
+                composable(
+                    route = Screen.GameDetail.route,
+                    arguments = listOf(navArgument("dealID") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val dealID = backStackEntry.arguments?.getString("dealID") ?: ""
+                    val storeMap by dealsViewModel.storeMap.collectAsState()
+                    GameDetailScreen(
+                        dealID = dealID,
+                        storeMap = storeMap,
+                        favoritesViewModel = favoritesViewModel,
+                        alertsViewModel = alertsViewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

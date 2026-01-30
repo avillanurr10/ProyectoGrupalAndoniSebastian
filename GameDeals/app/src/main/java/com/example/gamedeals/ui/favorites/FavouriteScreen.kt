@@ -2,6 +2,7 @@ package com.example.gamedeals.ui.favorites
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,7 +26,7 @@ import com.example.gamedeals.database.FavoriteDeal
 import com.example.gamedeals.viewmodel.FavoritesViewModel
 
 @Composable
-fun FavoritesScreen(viewModel: FavoritesViewModel) {
+fun FavoritesScreen(viewModel: FavoritesViewModel, onDealClick: (String) -> Unit) {
     val favorites by viewModel.favorites.collectAsState(initial = emptyList())
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
@@ -46,7 +47,7 @@ fun FavoritesScreen(viewModel: FavoritesViewModel) {
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(favorites) { deal ->
-                    FavoriteDealCard(deal = deal, viewModel = viewModel)
+                    FavoriteDealCard(deal = deal, viewModel = viewModel, onDealClick = onDealClick)
                 }
             }
         }
@@ -54,11 +55,12 @@ fun FavoritesScreen(viewModel: FavoritesViewModel) {
 }
 
 @Composable
-fun FavoriteDealCard(deal: FavoriteDeal, viewModel: FavoritesViewModel) {
+fun FavoriteDealCard(deal: FavoriteDeal, viewModel: FavoritesViewModel, onDealClick: (String) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .clickable { onDealClick(deal.dealID) },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.elevatedCardElevation(4.dp)
     ) {

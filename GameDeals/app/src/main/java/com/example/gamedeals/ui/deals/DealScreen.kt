@@ -1,31 +1,28 @@
 package com.example.gamedeals.ui.deals
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
-import com.example.gamedeals.database.FavoriteDeal
+import com.example.gamedeals.ui.deals.components.DealCard
+import com.example.gamedeals.ui.deals.components.FilterBottomSheet
+import com.example.gamedeals.ui.deals.components.SearchBar
+import com.example.gamedeals.ui.deals.models.*
+import com.example.gamedeals.viewmodel.AlertsViewModel
+import com.example.gamedeals.viewmodel.DealsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
@@ -33,6 +30,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
 
+// Definiciones de datos integradas de ramaSebas
 data class Deal(
     val title: String,
     val salePrice: String,
@@ -60,188 +58,358 @@ interface CheapSharkApi {
     suspend fun getStores(): List<Store>
 }
 
-object RetrofitClient {
-    val api: CheapSharkApi by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://www.cheapshark.com/api/1.0/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(CheapSharkApi::class.java)
-    }
-}
-
-// --- PANTALLA PRINCIPAL ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DealsScreen(viewModel: FavoritesViewModel) {
-    var deals by remember { mutableStateOf<List<Deal>>(emptyList()) }
-    var storeMap by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var hasError by remember { mutableStateOf(false) }
-
+fun DealsScreen(
+    favoritesViewModel: FavoritesViewModel,
+    dealsViewModel: DealsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    alertsViewModel: AlertsViewModel,
+    onDealClick: (String) -> Unit
+) {
+    // Estados del ViewModel (Main)
+    val filteredDeals by dealsViewModel.filteredDeals.collectAsState()
+    val storeMap by dealsViewModel.storeMap.collectAsState()
+    val isLoading by dealsViewModel.isLoading.collectAsState()
+    val hasError by dealsViewModel.hasError.collectAsState()
+    val activeFiltersCount by dealsViewModel.activeFiltersCount.collectAsState()
+    
+    // Estados de UI
+    val searchQuery by dealsViewModel.searchQuery.collectAsState()
+    val sortOption by dealsViewModel.sortOption.collectAsState()
+    var showFilterSheet by remember { mutableStateOf(false) }
+    
+    // Estado para animación de la suerte
     val scope = rememberCoroutineScope()
-
-    // Función para cargar datos de ofertas y tiendas en paralelo
-    fun loadData() {
-        scope.launch {
-            isLoading = true
-            hasError = false
-            try {
-                withContext(Dispatchers.IO) {
-                    val dealsDeferred = async { RetrofitClient.api.getDeals() }
-                    val storesDeferred = async { RetrofitClient.api.getStores() }
-
-                    deals = dealsDeferred.await()
-                    storeMap = storesDeferred.await().associate { it.storeID to it.storeName }
-                }
-            } catch (e: Exception) {
-                hasError = true
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) { loadData() }
+    var isShuffling by remember { mutableStateOf(false) }
+    val rotation = remember { Animatable(0f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        when {
-            isLoading -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        Column(modifier = Modifier.fillMaxSize()) {
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { dealsViewModel.searchQuery.value = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+
+            FilterControls(
+                activeFiltersCount = activeFiltersCount,
+                sortOption = sortOption,
+                onFilterClick = { showFilterSheet = true },
+                onSortChange = { dealsViewModel.sortOption.value = it },
+                resultCount = filteredDeals.size
+            )
+
+            if (activeFiltersCount > 0) {
+                val maxPrice by dealsViewModel.maxPrice.collectAsState()
+                val minDiscount by dealsViewModel.minDiscount.collectAsState()
+                val selectedStores by dealsViewModel.selectedStores.collectAsState()
+                val minMetacritic by dealsViewModel.minMetacritic.collectAsState()
+
+                ActiveFilterChips(
+                    maxPrice = maxPrice,
+                    minDiscount = minDiscount,
+                    minMetacritic = minMetacritic,
+                    selectedStoresCount = selectedStores.size,
+                    onClearMaxPrice = { dealsViewModel.maxPrice.value = 60f },
+                    onClearMinDiscount = { dealsViewModel.minDiscount.value = 0f },
+                    onClearMinMetacritic = { dealsViewModel.minMetacritic.value = 0f },
+                    onClearStores = { dealsViewModel.selectedStores.value = emptySet() }
+                )
             }
-            hasError -> {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Error de conexión", color = MaterialTheme.colorScheme.error)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { loadData() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Reintentar")
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                Crossfade(targetState = isLoading) { loading ->
+                    if (loading && filteredDeals.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        when {
+                            hasError -> ErrorState(onRetry = { dealsViewModel.refreshData() })
+                            filteredDeals.isEmpty() -> EmptyState()
+                            else -> DealsList(
+                                deals = filteredDeals,
+                                storeMap = storeMap,
+                                favoritesViewModel = favoritesViewModel,
+                                alertsViewModel = alertsViewModel,
+                                onDealClick = onDealClick
+                            )
+                        }
                     }
                 }
             }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(deals) { deal ->
-                        val storeName = storeMap[deal.storeID] ?: "Tienda ${deal.storeID}"
-                        DealCardImproved(deal, viewModel, storeName)
+        }
+
+        // --- BOTÓN DE LA SUERTE ---
+        FloatingActionButton(
+            onClick = {
+                if (!isShuffling) {
+                    scope.launch {
+                        isShuffling = true
+                        rotation.animateTo(
+                            targetValue = rotation.value + 360f,
+                            animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
+                        )
+                        val luckyDeal = dealsViewModel.getRandomDeal()
+                        if (luckyDeal != null) {
+                            onDealClick(luckyDeal.dealID)
+                        }
+                        isShuffling = false
                     }
                 }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .graphicsLayer(rotationZ = rotation.value),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ) {
+            Icon(
+                imageVector = if (isShuffling) Icons.Default.Casino else Icons.Default.AutoAwesome,
+                contentDescription = "Botón de la suerte",
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+
+    if (showFilterSheet) {
+        val maxPrice by dealsViewModel.maxPrice.collectAsState()
+        val minDiscount by dealsViewModel.minDiscount.collectAsState()
+        val minMetacritic by dealsViewModel.minMetacritic.collectAsState()
+        val selectedStores by dealsViewModel.selectedStores.collectAsState()
+
+        FilterBottomSheet(
+            maxPrice = maxPrice,
+            onMaxPriceChange = { dealsViewModel.maxPrice.value = it },
+            minDiscount = minDiscount,
+            onMinDiscountChange = { dealsViewModel.minDiscount.value = it },
+            minMetacritic = minMetacritic,
+            onMinMetacriticChange = { dealsViewModel.minMetacritic.value = it },
+            availableStores = storeMap,
+            selectedStores = selectedStores,
+            onStoresChange = { dealsViewModel.selectedStores.value = it },
+            onDismiss = { showFilterSheet = false },
+            onClearAll = { dealsViewModel.clearFilters() }
+        )
+    }
+}
+
+@Composable
+private fun FilterControls(
+    activeFiltersCount: Int,
+    sortOption: SortOption,
+    onFilterClick: () -> Unit,
+    onSortChange: (SortOption) -> Unit,
+    resultCount: Int
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FilterChip(
+            selected = activeFiltersCount > 0,
+            onClick = onFilterClick,
+            label = { Text(if (activeFiltersCount > 0) "Filtros ($activeFiltersCount)" else "Filtros") },
+            leadingIcon = { Icon(Icons.Default.FilterList, contentDescription = null) }
+        )
+
+        var expandedSort by remember { mutableStateOf(false) }
+        FilterChip(
+            selected = false,
+            onClick = { expandedSort = true },
+            label = { Text(sortOption.label) },
+            leadingIcon = { Icon(Icons.Default.Sort, contentDescription = null) }
+        )
+        DropdownMenu(
+            expanded = expandedSort,
+            onDismissRequest = { expandedSort = false }
+        ) {
+            SortOption.values().forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        onSortChange(option)
+                        expandedSort = false
+                    },
+                    leadingIcon = {
+                        if (sortOption == option) Icon(Icons.Default.Check, contentDescription = null)
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Text(
+            text = "$resultCount ofertas",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun ActiveFilterChips(
+    maxPrice: Float,
+    minDiscount: Float,
+    minMetacritic: Float,
+    selectedStoresCount: Int,
+    onClearMaxPrice: () -> Unit,
+    onClearMinDiscount: () -> Unit,
+    onClearMinMetacritic: () -> Unit,
+    onClearStores: () -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (maxPrice < 60f) {
+            item {
+                AssistChip(
+                    onClick = onClearMaxPrice,
+                    label = { Text("Max: $${maxPrice.toInt()}") },
+                    trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) }
+                )
+            }
+        }
+        if (minDiscount > 0f) {
+            item {
+                AssistChip(
+                    onClick = onClearMinDiscount,
+                    label = { Text("Desc: ${minDiscount.toInt()}%+") },
+                    trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) }
+                )
+            }
+        }
+        if (minMetacritic > 0f) {
+            item {
+                AssistChip(
+                    onClick = onClearMinMetacritic,
+                    label = { Text("Meta: ${minMetacritic.toInt()}+") },
+                    trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) }
+                )
+            }
+        }
+        if (selectedStoresCount > 0) {
+            item {
+                AssistChip(
+                    onClick = onClearStores,
+                    label = { Text("$selectedStoresCount tiendas") },
+                    trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) }
+                )
             }
         }
     }
 }
 
-// --- COMPONENTE DE TARJETA MEJORADO ---
 @Composable
-fun DealCardImproved(deal: Deal, viewModel: FavoritesViewModel, storeName: String) {
-    val uriHandler = LocalUriHandler.current
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+private fun DealsList(
+    deals: List<DealModel>,
+    storeMap: Map<String, String>,
+    favoritesViewModel: FavoritesViewModel,
+    alertsViewModel: AlertsViewModel,
+    onDealClick: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.height(IntrinsicSize.Min),
-                verticalAlignment = Alignment.CenterVertically
+        itemsIndexed(deals, key = { _, deal -> deal.dealID }) { index, deal ->
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(300, delayMillis = (index % 10) * 50)) +
+                        slideInVertically(
+                            initialOffsetY = { it / 2 },
+                            animationSpec = tween(300, delayMillis = (index % 10) * 50)
+                        )
             ) {
-                Image(
-                    painter = rememberAsyncImagePainter(deal.thumb),
-                    contentDescription = deal.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray)
+                DealCard(
+                    title = deal.title,
+                    salePrice = deal.salePrice,
+                    normalPrice = deal.normalPrice,
+                    storeID = deal.storeID,
+                    storeName = storeMap[deal.storeID] ?: "Tienda ${deal.storeID}",
+                    thumb = deal.thumb,
+                    savings = deal.savings,
+                    dealID = deal.dealID,
+                    metacriticScore = deal.metacriticScore,
+                    favoritesViewModel = favoritesViewModel,
+                    alertsViewModel = alertsViewModel,
+                    onDealClick = onDealClick
                 )
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = deal.title,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 2
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "$${deal.salePrice}",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "$${deal.normalPrice}",
-                            fontSize = 14.sp,
-                            textDecoration = TextDecoration.LineThrough,
-                            color = Color.Gray
-                        )
-                    }
-
-                    Text(
-                        text = "Tienda: $storeName",
-                        fontSize = 12.sp,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Botón para añadir a favoritos
-                OutlinedButton(
-                    onClick = {
-                        viewModel.addFavorite(
-                            FavoriteDeal(
-                                title = deal.title,
-                                salePrice = deal.salePrice,
-                                normalPrice = deal.normalPrice,
-                                storeID = deal.storeID,
-                                thumb = deal.thumb,
-                                userEmail = "" // ViewModel se encarga de asignar el usuario correcto
-                            )
-                        )
-                    },
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
-                        tint = Color.Red,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Favorito")
-                }
-
-                // Botón para ir a la web de la oferta
-                Button(
-                    onClick = {
-                        uriHandler.openUri("https://www.cheapshark.com/redirect?dealID=${deal.dealID}")
-                    },
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Ver Oferta 🌐")
-                }
             }
         }
+    }
+}
+
+@Composable
+private fun ErrorState(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.ErrorOutline,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Error de conexión",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "No se pudieron cargar las ofertas",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = onRetry) {
+            Icon(Icons.Default.Refresh, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Reintentar")
+        }
+    }
+}
+
+@Composable
+private fun EmptyState() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.SearchOff,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "No se encontraron ofertas",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Intenta ajustar los filtros de búsqueda",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

@@ -1,29 +1,49 @@
-import android.os.Bundle
-import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
 @Composable
-fun ProfileScreen(email: String, onLogout: () -> Unit) {
+fun ProfileScreen(email: String, themeViewModel: ThemeViewModel, onLogout: () -> Unit) {
+    val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Usuario: $email")
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(onClick = onLogout) {
+        Spacer(modifier = Modifier.height(24.dp))
+        Surface(
+            modifier = Modifier.size(100.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(imageVector = Icons.Default.Person, contentDescription = "Avatar", modifier = Modifier.size(60.dp))
+            }
+        }
+        Text(text = "Perfil de Usuario", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(text = "Email", style = MaterialTheme.typography.labelMedium)
+                Text(text = email, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Switch de Tema de main
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Row(modifier = Modifier.padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Modo Oscuro")
+                Switch(checked = isDarkTheme, onCheckedChange = { themeViewModel.toggleTheme(it) })
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // TU BOTÓN DE LOGOUT
+        Button(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        ) {
             Text("Cerrar Sesión")
         }
     }

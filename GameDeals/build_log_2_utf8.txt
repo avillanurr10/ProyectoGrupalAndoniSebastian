@@ -1,0 +1,380 @@
+> Task :app:clean
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:processDebugNavigationResources
+> Task :app:generateDebugResValues
+> Task :app:mapDebugSourceSetPaths
+> Task :app:checkDebugAarMetadata
+> Task :app:compileDebugNavigationResources
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:javaPreCompileDebug
+> Task :app:processDebugManifestForPackage
+> Task :app:desugarDebugFileDependencies
+> Task :app:mergeDebugJniLibFolders
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:checkDebugDuplicateClasses
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeLibDexDebug
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so. Run with --info option to learn more.
+
+> Task :app:mergeDebugResources
+> Task :app:processDebugResources
+
+> Task :app:kaptGenerateStubsDebugKotlin
+w: Kapt currently doesn't support language version 2.0+. Falling back to 1.9.
+
+> Task :app:kaptDebugKotlin
+> Task :app:mergeExtDexDebug
+
+> Task :app:compileDebugKotlin FAILED
+.\gradlew.bat : e: fi
+le:///C:/Users/andon/
+OneDrive/Escritorio/R
+epositorios_25_26/Pro
+yectoGrupalAndoniSeba
+stian/GameDeals/app/s
+rc/main/java/com/exam
+ple/gamedeals/viewmod
+el/DealsViewModel.kt:
+35:48 Type mismatch: 
+inferred type is 
+'kotlin.Unit', but 'k
+otlin.collections.Lis
+t<com.example.gamedea
+ls.ui.deals.models.De
+al>' was expected.
+En línea: 1 
+Carácter: 1
++ .\gradlew.bat 
+clean assembleDebug 
+> build_log_2.txt 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (e: file   
+ :///C:/U...' was    
+ expected.:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:37:7 Argument 
+type mismatch: 
+actual type is 'kotli
+n.coroutines.SuspendF
+unction7<kotlin.Array
+<T>, ERROR CLASS: 
+Cannot infer type 
+for parameter query, 
+ERROR CLASS: Cannot 
+infer type for 
+parameter maxP, 
+ERROR CLASS: Cannot 
+infer type for 
+parameter minD, 
+ERROR CLASS: Cannot 
+infer type for 
+parameter minM, 
+ERROR CLASS: Cannot 
+infer type for 
+parameter stores, 
+ERROR CLASS: Cannot 
+infer type for 
+parameter sort, R>', 
+but 'kotlin.coroutine
+s.SuspendFunction1<ko
+tlin.Array<T>, R>' 
+was expected.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:37:16 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:37:23 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:37:29 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:37:35 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:37:41 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:37:49 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:39:26 
+Unresolved reference 
+'title'.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:40:26 
+Unresolved reference 
+'salePrice'.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:41:27 
+Unresolved reference 
+'savings'.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:42:27 
+Unresolved reference 
+'metacriticScore'.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:43:30 Overload 
+resolution ambiguity 
+between candidates:
+fun <T> Array<out 
+T>.isEmpty(): Boolean
+fun BooleanArray.isEm
+pty(): Boolean
+fun 
+ByteArray.isEmpty(): 
+Boolean
+fun 
+CharArray.isEmpty(): 
+Boolean
+fun DoubleArray.isEmp
+ty(): Boolean
+fun FloatArray.isEmpt
+y(): Boolean
+fun 
+IntArray.isEmpty(): 
+Boolean
+fun 
+LongArray.isEmpty(): 
+Boolean
+fun ShortArray.isEmpt
+y(): Boolean
+fun CharSequence.isEm
+pty(): Boolean
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:43:46 
+Unresolved reference 
+'storeID'.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:47:81 
+Unresolved reference 
+'savings'.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:48:67 
+Unresolved reference 
+'salePrice'.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:49:53 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:49:62 Cannot 
+infer type for this 
+parameter. Please 
+specify it 
+explicitly.
+e: file:///C:/Users/a
+ndon/OneDrive/Escrito
+rio/Repositorios_25_2
+6/ProyectoGrupalAndon
+iSebastian/GameDeals/
+app/src/main/java/com
+/example/gamedeals/vi
+ewmodel/DealsViewMode
+l.kt:49:67 
+Unresolved reference 
+'title'.
+
+FAILURE: Build 
+failed with an 
+exception.
+
+* What went wrong:
+Execution failed for 
+task ':app:compileDeb
+ugKotlin'.
+> A failure occurred 
+while executing org.j
+etbrains.kotlin.compi
+lerRunner.GradleCompi
+lerRunnerWithWorkers$
+GradleKotlinCompilerW
+orkAction
+   > Compilation 
+error. See log for 
+more details
+
+* Try:
+> Run with 
+--stacktrace option 
+to get the stack 
+trace.
+> Run with --info or 
+--debug option to 
+get more log output.
+> Run with --scan to 
+get full insights.
+> Get more help at ht
+tps://help.gradle.org
+.
+
+BUILD FAILED in 20s
+33 actionable tasks: 33 executed

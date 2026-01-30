@@ -1,12 +1,11 @@
 package com.example.gamedeals.ui.main
 
-
-import ExtraScreen
-import ProfileScreen
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,15 +22,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
+
+// Imports de pantallas y componentes
 import com.example.gamedeals.BottomNavBar
 import com.example.gamedeals.Screen
+import com.example.gamedeals.ExtraScreen
+import com.example.gamedeals.ProfileScreen
+import com.example.gamedeals.database.AlertsRepository
 import com.example.gamedeals.database.AppDatabase
 import com.example.gamedeals.database.FavoritesRepository
 import com.example.gamedeals.ui.deals.DealsScreen
+import com.example.gamedeals.ui.deals.GameDetailScreen
 import com.example.gamedeals.ui.favorites.FavoritesScreen
+import com.example.gamedeals.ui.theme.GameDealsTheme
+import com.example.gamedeals.viewmodel.AlertsViewModel
+import com.example.gamedeals.viewmodel.DealsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
-import com.google.firebase.auth.FirebaseAuth
+import com.example.gamedeals.viewmodel.ThemeViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,262 +56,86 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun GameDealsApp() {
+    val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    
+    // Estados de autenticación
     var isLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
     var userEmail by remember { mutableStateOf(auth.currentUser?.email ?: "") }
-    var currentScreen by remember { mutableStateOf("login") } // login, register, main
+    var currentScreen by remember { mutableStateOf("login") }
 
-    if (isLoggedIn) {
-        MainScreen(
-            userEmail = userEmail,
-            onLogout = {
-                auth.signOut()
-                isLoggedIn = false
-                userEmail = ""
-                // Opcional: reiniciar currentScreen si se desea volver específicamente a login
-                currentScreen = "login" 
+    // Inicializar ThemeViewModel para el modo oscuro (de rama main)
+    val themeViewModel: ThemeViewModel = remember { ThemeViewModel(context) }
+    val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+
+    GameDealsTheme(darkTheme = isDarkTheme) {
+        if (!isLoggedIn) {
+            when (currentScreen) {
+                "login" -> LoginScreen(
+                    onLoginSuccess = { email ->
+                        userEmail = email
+                        isLoggedIn = true
+                    },
+                    onNavigateToRegister = { currentScreen = "register" }
+                )
+                "register" -> RegisterScreen(
+                    onRegisterSuccess = { email ->
+                        userEmail = email
+                        isLoggedIn = true
+                    },
+                    onNavigateToLogin = { currentScreen = "login" }
+                )
             }
-        )
-    } else {
-        when (currentScreen) {
-            "login" -> LoginScreen(
-                onLoginSuccess = { email ->
-                    userEmail = email
-                    isLoggedIn = true
-                },
-                onNavigateToRegister = { currentScreen = "register" }
-            )
-            "register" -> RegisterScreen(
-                onRegisterSuccess = { email ->
-                    userEmail = email
-                    isLoggedIn = true
-                },
-                onNavigateToLogin = { currentScreen = "login" }
-            )
-        }
-    }
-}
-
-@Composable
-fun LoginScreen(onLoginSuccess: (String) -> Unit, onNavigateToRegister: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
-    var isLoading by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Gamepad,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Text(
-            text = "GameDeals",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Contraseña") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = {
-                if (email.isNotEmpty() && password.isNotEmpty()) {
-                    isLoading = true
-                    auth.signInWithEmailAndPassword(email, password)
-                        .addOnCompleteListener { task ->
-                            isLoading = false
-                            if (task.isSuccessful) {
-                                onLoginSuccess(email)
-                                Toast.makeText(context, "Bienvenido de nuevo", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                } else {
-                    Toast.makeText(context, "Por favor llena todos los campos", Toast.LENGTH_SHORT).show()
+        } else {
+            val db = AppDatabase.getDatabase(context)
+            val alertsRepository = remember { AlertsRepository(db.priceAlertDao()) }
+            val alertsViewModel = remember { AlertsViewModel(alertsRepository) }
+            
+            MainScreen(
+                userEmail = userEmail,
+                themeViewModel = themeViewModel,
+                alertsViewModel = alertsViewModel,
+                onLogout = {
+                    auth.signOut()
+                    isLoggedIn = false
+                    userEmail = ""
+                    currentScreen = "login"
                 }
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            enabled = !isLoading
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-            } else {
-                Text("Iniciar sesión", fontSize = 16.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = onNavigateToRegister) {
-            Text("¿No tienes cuenta? Regístrate aquí")
-        }
-    }
-}
-
-@Composable
-fun RegisterScreen(onRegisterSuccess: (String) -> Unit, onNavigateToLogin: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
-    var isLoading by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Crear Cuenta",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Contraseña") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = {
-                if (email.isNotEmpty() && password.isNotEmpty()) {
-                    if (password.length < 6) {
-                        Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
-                    } else {
-                        isLoading = true
-                        auth.createUserWithEmailAndPassword(email, password)
-                            .addOnCompleteListener { task ->
-                                isLoading = false
-                                if (task.isSuccessful) {
-                                    onRegisterSuccess(email)
-                                    Toast.makeText(context, "Cuenta creada exitosamente", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                    }
-                } else {
-                    Toast.makeText(context, "Por favor llena todos los campos", Toast.LENGTH_SHORT).show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            enabled = !isLoading
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-            } else {
-                Text("Registrarse", fontSize = 16.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = onNavigateToLogin) {
-            Text("¿Ya tienes cuenta? Inicia sesión")
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(userEmail: String, onLogout: () -> Unit) {
+fun MainScreen(
+    userEmail: String, 
+    themeViewModel: ThemeViewModel, 
+    alertsViewModel: AlertsViewModel,
+    onLogout: () -> Unit
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
     val db = remember { AppDatabase.getDatabase(context) }
     val repository = remember { FavoritesRepository(db.favoriteDealDao()) }
-    // Reinicializamos el ViewModel cuando cambia el usuario (o el contexto/db)
+    
+    // ViewModel de favoritos adaptado al usuario actual
     val favoritesViewModel = remember(userEmail) { 
-        FavoritesViewModel(repository, userEmail)
+        FavoritesViewModel(repository, userEmail) 
     }
+    val dealsViewModel: DealsViewModel = viewModel()
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("GameDeals", fontWeight = FontWeight.ExtraBold) },
+                title = { 
+                    Text(
+                        "GameDeals", 
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.headlineSmall
+                    ) 
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        },
-        bottomBar = { BottomNavBar(navController) }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Home.route) {
-                DealsScreen(viewModel = favoritesViewModel)
-            }
-            composable(Screen.Favorites.route) {
-                FavoritesScreen(viewModel = favoritesViewModel)
-            }
-            composable(Screen.Profile.route) {
-                ProfileScreen(email = userEmail, onLogout = onLogout)
-            }
-            composable(Screen.Extra.route) {
-                ExtraScreen()
-            }
-        }
-    }
-}
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary

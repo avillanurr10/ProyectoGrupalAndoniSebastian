@@ -1,8 +1,9 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose") // 🔹 Necesario para Kotlin 2.0+
-    id("kotlin-kapt") // 🔹 Necesario para Room
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("kotlin-kapt")
+    id("com.google.gms.google-services") version "4.4.1"
 }
 
 android {
@@ -48,39 +49,34 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.9.0")
 
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+
     // Compose BOM y UI
     implementation(platform("androidx.compose:compose-bom:2026.01.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    
+    // INTEGRACIÓN DE AMBAS RAMAS
     implementation(libs.androidx.compose.animation.core)
+    implementation(libs.androidx.junit.ktx)
+
     debugImplementation("androidx.compose.ui:ui-tooling")
-
-    // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.3")
-
-    // Retrofit & Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11")
-
-    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.compose.material:material-icons-core:1.5.0")
     implementation("androidx.compose.material:material-icons-extended:1.5.0")
-
-    // Coil para imágenes
     implementation("io.coil-kt:coil-compose:2.4.0")
-
-    // Room (DB local para favoritos)
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-
-    // DataStore para preferencias
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.6")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

@@ -24,6 +24,39 @@ import com.example.gamedeals.viewmodel.AlertsViewModel
 import com.example.gamedeals.viewmodel.DealsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.Query
+
+// Definiciones de datos integradas de ramaSebas
+data class Deal(
+    val title: String,
+    val salePrice: String,
+    val normalPrice: String,
+    val storeID: String,
+    val thumb: String,
+    val savings: String? = null,
+    val dealID: String
+)
+
+data class Store(
+    val storeID: String,
+    val storeName: String,
+    val isActive: Int
+)
+
+interface CheapSharkApi {
+    @GET("deals")
+    suspend fun getDeals(
+        @Query("upperPrice") upperPrice: String? = null,
+        @Query("pageSize") pageSize: Int = 30
+    ): List<Deal>
+
+    @GET("stores")
+    suspend fun getStores(): List<Store>
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +66,7 @@ fun DealsScreen(
     alertsViewModel: AlertsViewModel,
     onDealClick: (String) -> Unit
 ) {
-    // Estados del ViewModel
+    // Estados del ViewModel (Main)
     val filteredDeals by dealsViewModel.filteredDeals.collectAsState()
     val storeMap by dealsViewModel.storeMap.collectAsState()
     val isLoading by dealsViewModel.isLoading.collectAsState()
@@ -115,7 +148,6 @@ fun DealsScreen(
                 if (!isShuffling) {
                     scope.launch {
                         isShuffling = true
-                        // Animación de rotación rápida
                         rotation.animateTo(
                             targetValue = rotation.value + 360f,
                             animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
@@ -280,7 +312,7 @@ private fun ActiveFilterChips(
 
 @Composable
 private fun DealsList(
-    deals: List<Deal>,
+    deals: List<DealModel>,
     storeMap: Map<String, String>,
     favoritesViewModel: FavoritesViewModel,
     alertsViewModel: AlertsViewModel,

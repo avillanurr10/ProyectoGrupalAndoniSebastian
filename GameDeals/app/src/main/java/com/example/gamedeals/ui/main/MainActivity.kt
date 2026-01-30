@@ -5,6 +5,9 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,7 +61,7 @@ class MainActivity : ComponentActivity() {
 fun GameDealsApp() {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
-    
+
     // Estados de autenticación
     var isLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
     var userEmail by remember { mutableStateOf(auth.currentUser?.email ?: "") }
@@ -90,7 +93,7 @@ fun GameDealsApp() {
             val db = AppDatabase.getDatabase(context)
             val alertsRepository = remember { AlertsRepository(db.priceAlertDao()) }
             val alertsViewModel = remember { AlertsViewModel(alertsRepository) }
-            
+
             MainScreen(
                 userEmail = userEmail,
                 themeViewModel = themeViewModel,
@@ -109,8 +112,8 @@ fun GameDealsApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    userEmail: String, 
-    themeViewModel: ThemeViewModel, 
+    userEmail: String,
+    themeViewModel: ThemeViewModel,
     alertsViewModel: AlertsViewModel,
     onLogout: () -> Unit
 ) {
@@ -119,23 +122,88 @@ fun MainScreen(
 
     val db = remember { AppDatabase.getDatabase(context) }
     val repository = remember { FavoritesRepository(db.favoriteDealDao()) }
-    
+
     // ViewModel de favoritos adaptado al usuario actual
-    val favoritesViewModel = remember(userEmail) { 
-        FavoritesViewModel(repository, userEmail) 
+    val favoritesViewModel = remember(userEmail) {
+        FavoritesViewModel(repository, userEmail)
     }
     val dealsViewModel: DealsViewModel = viewModel()
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { 
+                title = {
                     Text(
-                        "GameDeals", 
+                        "GameDeals",
                         fontWeight = FontWeight.ExtraBold,
                         style = MaterialTheme.typography.headlineSmall
-                    ) 
+                    )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        },
+        // bottomBar argument removed to allow floating overlay
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Home.route,
+                enterTransition = {
+                    fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.95f)
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = tween(300))
+                }
+            ) {
+                composable(Screen.Home.route) {
+                    DealsScreen(
+                        favoritesViewModel = favoritesViewModel,
+                        dealsViewModel = dealsViewModel,
+                        alertsViewModel = alertsViewModel,
+                        onDealClick = { dealID ->
+                            navController.navigate(Screen.GameDetail.createRoute(dealID))
+                        }
+                    )
+                }
+                composable(Screen.Favorites.route) {
+                    FavoritesScreen(
+                        viewModel = favoritesViewModel,
+                        onDealClick = { dealID ->
+                            navController.navigate(Screen.GameDetail.createRoute(dealID))
+                        }
+                    )
+                }
+                composable(Screen.Profile.route) {
+                    // Pasamos themeViewModel para el switch y onLogout para Firebase
+                    ProfileScreen(userEmail, themeViewModel, onLogout)
+                }
+                composable(Screen.Extra.route) {
+                    ExtraScreen(alertsViewModel = alertsViewModel)
+                }
+                composable(
+                    route = Screen.GameDetail.route,
+                    arguments = listOf(navArgument("dealID") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val dealID = backStackEntry.arguments?.getString("dealID") ?: ""
+                    val storeMap by dealsViewModel.storeMap.collectAsState()
+                    GameDetailScreen(
+                        dealID = dealID,
+                        storeMap = storeMap,
+                        favoritesViewModel = favoritesViewModel,
+                        alertsViewModel = alertsViewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+            }
+            
+            // Floating Bottom Navigation Bar
+            BottomNavBar(
+                navController = navController,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+    }
+}

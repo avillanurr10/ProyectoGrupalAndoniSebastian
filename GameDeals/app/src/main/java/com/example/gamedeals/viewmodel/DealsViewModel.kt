@@ -14,14 +14,26 @@ class DealsViewModel : ViewModel() {
 
     private val _deals = MutableStateFlow<List<Deal>>(emptyList())
     private val _storeMap = MutableStateFlow<Map<String, String>>(emptyMap())
-    
+
+    val deals: StateFlow<List<Deal>> = _deals.asStateFlow() // Expose raw list for pagination check
     val storeMap: StateFlow<Map<String, String>> = _storeMap.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
+
     private val _hasError = MutableStateFlow(false)
     val hasError: StateFlow<Boolean> = _hasError.asStateFlow()
+
+    private val _currentPage = MutableStateFlow(0)
+    val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
+    
+    // Asumimos un máximo arbitrario porque la API no lo devuelve en este endpoint fácilmente
+    // o calculamos basado en scroll. Para paginación numerada, permitiremos navegar libremente.
+    private val _totalPages = MutableStateFlow(50) 
+    val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
 
     // --- FILTERS STATE ---
     val searchQuery = MutableStateFlow("")
@@ -75,25 +87,68 @@ class DealsViewModel : ViewModel() {
         loadData()
     }
 
-    fun loadData() {
-        if (_deals.value.isNotEmpty() && _storeMap.value.isNotEmpty()) return
+    fun loadData(isLoadMore: Boolean = false) {
+        if (_isLoading.value || _isLoadingMore.value) return
 
         viewModelScope.launch {
-            _isLoading.value = true
+            if (isLoadMore) {
+                _isLoadingMore.value = true
+            } else {
+                _isLoading.value = true
+            }
+            
             _hasError.value = false
+            
             try {
                 withContext(Dispatchers.IO) {
-                    val dealsResponse = RetrofitClient.api.getDeals()
-                    val storesResponse = RetrofitClient.api.getStores()
+                    val dealsResponse = RetrofitClient.api.getDeals(
+                        pageSize = 60,
+                        pageNumber = _currentPage.value
+                    )
                     
-                    _deals.value = dealsResponse
-                    _storeMap.value = storesResponse.associate { it.storeID to it.storeName }
+                    if (dealsResponse.isEmpty()) {
+                        // isLastPage logic removed
+                    } else {
+                        if (isLoadMore) {
+                             // Infinite scroll legacy support if needed
+                             _deals.value = dealsResponse
+                        } else {
+                            _deals.value = dealsResponse
+                            // Load stores only on first load
+                            if (_storeMap.value.isEmpty()) {
+                                val storesResponse = RetrofitClient.api.getStores()
+                                _storeMap.value = storesResponse.associate { it.storeID to it.storeName }
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                _hasError.value = true
+                if (!isLoadMore) _hasError.value = true
             } finally {
                 _isLoading.value = false
+                _isLoadingMore.value = false
             }
+        }
+    }
+
+    fun loadNextPage() {
+        if (_currentPage.value < _totalPages.value) {
+            _currentPage.value += 1
+            loadData()
+        }
+    }
+
+    fun loadPreviousPage() {
+        if (_currentPage.value > 0) {
+            _currentPage.value -= 1
+            loadData()
+        }
+    }
+    
+    fun jumpToPage(page: Int) {
+        if (page in 0.._totalPages.value) {
+            _currentPage.value = page
+            loadData()
         }
     }
 

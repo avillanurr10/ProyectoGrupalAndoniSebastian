@@ -1,6 +1,8 @@
 package com.example.gamedeals.ui.deals.components
 
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,20 +13,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.gamedeals.R
 import com.example.gamedeals.database.FavoriteDeal
-import com.example.gamedeals.ui.deals.components.PriceAlertDialog
 import com.example.gamedeals.viewmodel.AlertsViewModel
 import com.example.gamedeals.viewmodel.FavoritesViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun DealCard(
@@ -42,8 +49,27 @@ fun DealCard(
     onDealClick: (String) -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
     var showAlertDialog by remember { mutableStateOf(false) }
     val discountPercent = savings?.toFloatOrNull()?.toInt() ?: 0
+
+    // Animation State
+    var isFavorite by remember { mutableStateOf(false) } // This should ideally stay sync with DB, currently local visual
+    var isLiked by remember { mutableStateOf(false) }
+    
+    val heartScale by animateFloatAsState(
+        targetValue = if (isLiked) 1.2f else 1f,
+        animationSpec = keyframes {
+            durationMillis = 300
+            0.8f at 100
+            1.2f at 200
+        }
+    )
+    
+    val heartColor by animateColorAsState(
+        targetValue = if (isLiked) Color.Red else MaterialTheme.colorScheme.tertiary,
+        label = "HeartColor"
+    )
 
     if (showAlertDialog) {
         PriceAlertDialog(
@@ -66,23 +92,22 @@ fun DealCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(),
+            .padding(vertical = 8.dp),
         onClick = { onDealClick(dealID) },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 6.dp,
-            pressedElevation = 8.dp
+            defaultElevation = 8.dp,
+            pressedElevation = 12.dp
         ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column {
-            // Imagen con badge de descuento
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(200.dp)
             ) {
                 Image(
                     painter = rememberAsyncImagePainter(thumb),
@@ -91,7 +116,6 @@ fun DealCard(
                     modifier = Modifier.fillMaxSize()
                 )
                 
-                // Gradiente overlay para mejor legibilidad
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -99,188 +123,166 @@ fun DealCard(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = 0.7f)
+                                    Color.Black.copy(alpha = 0.4f),
+                                    Color.Black.copy(alpha = 0.9f)
                                 ),
-                                startY = 0f,
-                                endY = 600f
+                                startY = 100f
                             )
                         )
                 )
 
-                // Badge de descuento
                 if (discountPercent > 0) {
-                    Surface(
+                    Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(12.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFE53935),
-                        shadowElevation = 4.dp
+                            .padding(12.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Brush.horizontalGradient(listOf(Color(0xFFF43F5E), Color(0xFFE11D48))))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = "-$discountPercent%",
                             color = Color.White,
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            fontWeight = FontWeight.Black
                         )
                     }
                 }
 
-                // Hotness Badge (Epic Deal)
-                val isEpicDeal = remember(savings, metacriticScore) {
-                    val savingsVal = savings?.toFloatOrNull() ?: 0f
-                    val metaVal = metacriticScore?.toIntOrNull() ?: 0
-                    savingsVal >= 90f || (savingsVal >= 75f && metaVal >= 85)
-                }
-
-                if (isEpicDeal) {
-                    Surface(
+                if (metacriticScore != null) {
+                    val score = metacriticScore.toIntOrNull() ?: 0
+                    val scoreColor = when {
+                        score >= 75 -> Color(0xFF4CAF50)
+                        score >= 50 -> Color(0xFFFFC107)
+                        else -> Color(0xFFF44336)
+                    }
+                    
+                    Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(12.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color.Transparent
+                            .padding(12.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(Color(0xFFFF8F00), Color(0xFFFF3D00))
-                                    )
-                                )
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Whatshot,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "OFERTA ÉPICA",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold
+                                text = "Meta",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                            Text(
+                                text = metacriticScore,
+                                color = scoreColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
                         }
                     }
                 }
 
-                // Título sobre la imagen
-                Column(
+                Text(
+                    text = title,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 24.sp,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(16.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                )
             }
 
-            // Contenido de la tarjeta
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
             ) {
-                // Precios
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "$$salePrice",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "$$normalPrice",
-                        fontSize = 16.sp,
-                        textDecoration = TextDecoration.LineThrough,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
-
-                // Tienda
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer
-                    ) {
+                    Column {
                         Text(
                             text = storeName,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary
                         )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "$$salePrice",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "$$normalPrice",
+                                fontSize = 14.sp,
+                                textDecoration = TextDecoration.LineThrough,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
                     }
 
-                    IconButton(
-                        onClick = { showAlertDialog = true },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.NotificationsActive,
-                            contentDescription = "Poner alerta",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    Row {
+                        IconButton(onClick = { showAlertDialog = true }) {
+                            Icon(
+                                Icons.Default.NotificationsActive,
+                                contentDescription = "Alerta",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                favoritesViewModel.addFavorite(
+                                    FavoriteDeal(
+                                        title = title,
+                                        salePrice = salePrice,
+                                        normalPrice = normalPrice,
+                                        storeID = storeID,
+                                        thumb = thumb,
+                                        dealID = dealID,
+                                        userEmail = ""
+                                    )
+                                )
+                                scope.launch {
+                                    isLiked = true
+                                    delay(400)
+                                    isLiked = false
+                                }
+                            },
+                            modifier = Modifier.scale(heartScale)
+                        ) {
+                            Icon(
+                                if(isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Favorito",
+                                tint = heartColor
+                            )
+                        }
                     }
                 }
 
-                // Botones
-                Row(
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Button(
+                    onClick = {
+                         uriHandler.openUri("https://www.cheapshark.com/redirect?dealID=$dealID")
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            favoritesViewModel.addFavorite(
-                                FavoriteDeal(
-                                    title = title,
-                                    salePrice = salePrice,
-                                    normalPrice = normalPrice,
-                                    storeID = storeID,
-                                    thumb = thumb,
-                                    dealID = dealID
-                                )
-                            )
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = null,
-                            tint = Color(0xFFE91E63),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Guardar")
-                    }
-
-                    Button(
-                        onClick = {
-                            uriHandler.openUri("https://www.cheapshark.com/redirect?dealID=$dealID")
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Ver Oferta", fontWeight = FontWeight.Bold)
-                    }
+                    Text(stringResource(R.string.view_deal), fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.example.gamedeals
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,12 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gamedeals.database.PriceAlert
 import com.example.gamedeals.preferences.UserPreferences
 import com.example.gamedeals.viewmodel.AlertsViewModel
+import com.example.gamedeals.util.LocaleHelper
 import kotlinx.coroutines.launch
 
 @Composable
@@ -43,7 +46,7 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
                 contentAlignment = Alignment.CenterStart
             ) {
                 Text(
-                    text = "Ajustes",
+                    text = stringResource(R.string.settings),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary
@@ -57,14 +60,14 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 32.dp)
+            contentPadding = PaddingValues(bottom = 120.dp)
         ) {
-            item { SettingsHeader("Preferencias") }
+            item { SettingsHeader(stringResource(R.string.preferences)) }
 
             item {
                 SettingsToggleItem(
-                    title = "Notificaciones",
-                    description = "Recibir alertas de nuevas ofertas",
+                    title = stringResource(R.string.notifications),
+                    description = stringResource(R.string.notifications_desc),
                     icon = Icons.Default.Notifications,
                     checked = notificationsEnabled,
                     onCheckedChange = { 
@@ -75,7 +78,7 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
 
             item {
                 SettingsArrowItem(
-                    title = "Idioma",
+                    title = stringResource(R.string.language),
                     description = selectedLanguage,
                     icon = Icons.Default.Language,
                     onClick = { showLanguageDialog = true }
@@ -84,7 +87,7 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
 
             if (priceAlerts.isNotEmpty()) {
                 item { Spacer(modifier = Modifier.height(8.dp)) }
-                item { SettingsHeader("Mis Alertas de Precio") }
+                item { SettingsHeader(stringResource(R.string.my_alerts)) }
                 items(priceAlerts.size) { index ->
                     val alert = priceAlerts[index]
                     AlertItem(
@@ -96,26 +99,26 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
             }
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
-            item { SettingsHeader("Almacenamiento") }
+            item { SettingsHeader(stringResource(R.string.storage)) }
 
             item {
                 SettingsActionItem(
-                    title = "Limpiar caché",
-                    description = "Libera espacio borrando datos temporales",
+                    title = stringResource(R.string.clear_cache),
+                    description = stringResource(R.string.clear_cache_desc),
                     icon = Icons.Default.DeleteSweep,
                     onClick = {
-                        Toast.makeText(context, "Caché limpiada con éxito", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.cache_cleared), Toast.LENGTH_SHORT).show()
                     }
                 )
             }
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
-            item { SettingsHeader("Información") }
+            item { SettingsHeader(stringResource(R.string.about)) }
 
             item {
                 SettingsActionItem(
-                    title = "Acerca de la app",
-                    description = "GameDeals v1.2.0 • Hecho con ❤️",
+                    title = stringResource(R.string.about),
+                    description = stringResource(R.string.about_desc),
                     icon = Icons.Default.Info,
                     onClick = { showInfoDialog = true }
                 )
@@ -124,17 +127,22 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
     }
 
     if (showLanguageDialog) {
+        val languages = listOf("Español", "English")
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
-            title = { Text("Seleccionar Idioma") },
+            title = { Text(stringResource(R.string.select_language)) },
             text = {
                 Column {
-                    listOf("Español", "English").forEach { lang ->
+                    languages.forEach { lang ->
                         Row(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    scope.launch { userPreferences.setSelectedLanguage(lang) }
+                                    scope.launch { 
+                                        userPreferences.setSelectedLanguage(lang)
+                                        LocaleHelper.setLocale(context, lang)
+                                        (context as? Activity)?.recreate() // Restart to apply
+                                    }
                                     showLanguageDialog = false
                                 }
                                 .padding(16.dp),
@@ -149,7 +157,7 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showLanguageDialog = false }) {
-                    Text("Cerrar")
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -160,11 +168,11 @@ fun ExtraScreen(alertsViewModel: AlertsViewModel) {
             onDismissRequest = { showInfoDialog = false },
             title = { Text("GameDeals") },
             text = {
-                Text("Desarrollado para encontrar las mejores ofertas de videojuegos en tiempo real.\n\nVersión 1.2.0\n© 2026 Proyecto Grupal")
+                Text(stringResource(R.string.about_desc))
             },
             confirmButton = {
                 Button(onClick = { showInfoDialog = false }) {
-                    Text("Aceptar")
+                    Text(stringResource(R.string.accept))
                 }
             }
         )
@@ -299,10 +307,14 @@ fun AlertItem(
             Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = title, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1)
-                Text(text = "Avisar si baja de $$targetPrice", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = stringResource(R.string.alert_desc, targetPrice.toString()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Borrar alerta", tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             }
         }
     }

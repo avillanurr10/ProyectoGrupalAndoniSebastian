@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 
 class FavoritesRepository(private val favoriteDealDao: FavoriteDealDao) {
 
-    val allFavorites: Flow<List<FavoriteDeal>> = favoriteDealDao.getAllFavorites()
+    fun getFavorites(email: String): Flow<List<FavoriteDeal>> = favoriteDealDao.getAllFavorites(email)
 
     suspend fun addFavorite(favoriteDeal: FavoriteDeal) {
         favoriteDealDao.addFavorite(favoriteDeal)

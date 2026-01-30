@@ -54,7 +54,8 @@ interface CheapSharkApi {
     @GET("deals")
     suspend fun getDeals(
         @Query("upperPrice") upperPrice: String? = null,
-        @Query("pageSize") pageSize: Int = 60
+        @Query("pageSize") pageSize: Int = 60,
+        @Query("pageNumber") pageNumber: Int = 0
     ): List<Deal>
 
     @GET("deals")
